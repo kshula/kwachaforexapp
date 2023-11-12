@@ -42,7 +42,7 @@ Install Dependencies:
 ```
 Run the App:
 ```bash
-  streamlit run app.py
+  streamlit run kwacha.py
 
 ```
 ## Features
