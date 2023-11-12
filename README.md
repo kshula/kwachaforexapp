@@ -3,7 +3,6 @@
 
 Welcome to the Kwacha Forex App! This open-source app provides a range of features for exploring, visualizing, and analyzing Dollar forex data, with a focus on the Zambian Kwacha currency.
 
-![Semantic description of image](/[images/path/to/folder/image.jpg](https://www.vantagemarkets.com/storage/2023/02/forex-markets-1.png) "Image Title")
 
 ## Acknowledgements
 
