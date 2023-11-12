@@ -1,7 +1,7 @@
 streamlit
 pandas
 numpy
-sklearn
+scikit-learn
 plotly
 Pillow
 xgboost
