@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from PIL import Image
 
 def read_data(file_path):
-    df = pd.read_excel(file_path)
+    df = pd.read_csv(file_path)
     return df
 
 def create_lag_column(df, lag_days=5):
@@ -128,7 +128,7 @@ def about_page():
     st.write("Feel free to navigate through different features using the sidebar.")
     
 def main():
-    file_path = 'data.xlsx'
+    file_path = 'data.csv'
     df = read_data(file_path)
     df = create_lag_column(df)
     df = calculate_moving_averages(df)
