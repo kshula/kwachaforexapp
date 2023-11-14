@@ -3,7 +3,6 @@ scikit-learn
 pandas
 openpyxl
 numpy
-sklearn
 plotly
 Pillow
 xgboost

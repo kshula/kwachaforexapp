@@ -104,8 +104,9 @@ def home_page():
     st.divider()  # 👈 Draws a horizontal rul
     st.markdown(
     """
-    Kwacha Forex app is an open-source app built using
+    Kwacha Forex app is an open-source demo app built using
     Machine Learning and Data Science.
+
     **👈 Select a Page from the sidebar** to see some features
     of what Kwacha Forex App can do!
     ### Want to learn more?
