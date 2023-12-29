@@ -1,6 +1,6 @@
 streamlit
 scikit-learn
-pandas
+polars
 openpyxl
 numpy
 plotly

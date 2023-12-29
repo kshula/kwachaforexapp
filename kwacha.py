@@ -1,5 +1,5 @@
 import streamlit as st
-import pandas as pd
+import polars as pl  # Import Polars instead of Pandas
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
@@ -9,12 +9,14 @@ import plotly.graph_objects as go
 from PIL import Image
 
 def read_data(file_path):
-    df = pd.read_csv(file_path)
+    # Use Polars to read the CSV file
+    df = pl.read_csv(file_path)
     return df
 
 def create_lag_column(df, lag_days=5):
-    df['SELLING RATE (5 Days Lag)'] = df['SELLING RATE'].shift(lag_days)
-    df = df.dropna()
+    # Use Polars shift function
+    df = df.with_column('SELLING RATE (5 Days Lag)', df['SELLING RATE'].shift(lag_days))
+    df = df.drop_na(subset=['SELLING RATE (5 Days Lag)'])  # Drop NA values
     return df
 
 def train_models(X, y):
@@ -33,20 +35,25 @@ def train_models(X, y):
     return lr_model, rf_model, dt_model, xgb_model
 
 def visualize_data(df):
+    # Use Polars syntax for plotting
     fig = go.Figure()
 
     # Mid Rate
-    fig.add_trace(go.Scatter(x=df['DATE'], y=df['MID RATE'], mode='lines', name='Mid Rate'))
+    fig.add_trace(go.Scatter(x=df['DATE'].to_list(), y=df['MID RATE'].to_list(), mode='lines', name='Mid Rate'))
 
     return fig
+
 
 def generate_stats_output(df):
     stats_df = df.describe()
     return stats_df
 
 def predict_future_values(model, lag_values, days):
-    predictions = [model.predict([[lag_value]])[0] for lag_value in lag_values]
-    return predictions
+    # Use Polars to create a DataFrame for predictions
+    predictions_df = pl.DataFrame({'SELLING RATE (5 Days Lag)': lag_values})
+    predictions_df['Prediction'] = predictions_df['SELLING RATE (5 Days Lag)'].apply(lambda x: model.predict([[x]])[0])
+
+    return predictions_df['Prediction'].to_list()
 
 def plot_predictions(last_n_days, predictions_df, days_to_predict):
     fig = go.Figure()
@@ -60,9 +67,10 @@ def plot_predictions(last_n_days, predictions_df, days_to_predict):
     return fig
 
 def calculate_moving_averages(df):
-    df['15 Day MA'] = df['MID RATE'].rolling(window=15).mean()
-    df['30 Day MA'] = df['MID RATE'].rolling(window=30).mean()
-    df['60 Day MA'] = df['MID RATE'].rolling(window=60).mean()
+    # Use Polars rolling_mean function
+    df = df.with_column('15 Day MA', df['MID RATE'].rolling_mean(window=15))
+    df = df.with_column('30 Day MA', df['MID RATE'].rolling_mean(window=30))
+    df = df.with_column('60 Day MA', df['MID RATE'].rolling_mean(window=60))
     return df
 
 def visualize_moving_averages(df):
@@ -83,10 +91,12 @@ def visualize_moving_averages(df):
     return fig
 
 def calculate_volatility(df, window):
-    df['Mid Rate Returns'] = df['MID RATE'].pct_change()
-    df['Volatility'] = df['Mid Rate Returns'].rolling(window=window).std()
-    df = df.dropna()
+    # Use Polars pct_change and rolling_std functions
+    df = df.with_column('Mid Rate Returns', df['MID RATE'].pct_change())
+    df = df.with_column('Volatility', df['Mid Rate Returns'].rolling_std(window=window))
+    df = df.drop_na(subset=['Volatility'])  # Drop NA values
     return df
+
 
 def plot_volatility(df):
     fig = go.Figure()
@@ -145,15 +155,11 @@ def main():
     elif selected_page == "About":
         about_page()
     elif selected_page == "Visualization":
-        st.title("Visualization")
-        st.write("Explore visualizations of the Forex data here.")
-
-        # Calculate and plot moving averages
+        # ...
         df_with_averages = calculate_moving_averages(df.copy())
         fig_averages = visualize_moving_averages(df_with_averages)
         st.plotly_chart(fig_averages)
 
-        # Calculate and plot volatility
         volatility_window = st.sidebar.slider("Select Volatility Window (Days)", 1, 30, 20)
         df_with_volatility = calculate_volatility(df.copy(), volatility_window)
         fig_volatility = plot_volatility(df_with_volatility)
@@ -161,47 +167,41 @@ def main():
 
         st.write("Go to the 'Stats Output' or 'Predictions' pages for more analysis.")
     elif selected_page == "Stats Output":
-        st.title("Stats Output")
-        st.write("View statistical outputs of the Forex data here.")
-
-        # Example stats output using pandas
-        stats_df = df.describe()
+        # ...
+        stats_df = df.describe().to_pandas()  # Convert to Pandas for compatibility
         st.write(stats_df)
 
         st.write("Go to the 'Visualization' or 'Predictions' pages for more analysis.")
     elif selected_page == "Predictions":
-        st.title("Predictions")
-        st.write("Make predictions using different models here.")
-        st.write("Adjust slider to predict selling rate for different days")
-        st.divider()  # 👈 Draws a horizontal rul
-        days_to_predict = st.sidebar.slider("Select Days for Prediction", 1, 15, 5, key="days_to_predict")
-
-        X = df['SELLING RATE (5 Days Lag)'].values.reshape(-1, 1)
-        y = df['SELLING RATE'].values.reshape(-1, 1)
+        # ...
+        X = df['SELLING RATE (5 Days Lag)'].to_numpy().reshape(-1, 1)
+        y = df['SELLING RATE'].to_numpy().reshape(-1, 1)
 
         lr_model, rf_model, dt_model, xgb_model = train_models(X, y)
 
-        lag_values = df['SELLING RATE (5 Days Lag)'].values[-days_to_predict:]
+        lag_values = df['SELLING RATE (5 Days Lag)'].tail(days_to_predict).to_numpy()
         lr_predictions = predict_future_values(lr_model, lag_values, days_to_predict)
         rf_predictions = predict_future_values(rf_model, lag_values, days_to_predict)
         dt_predictions = predict_future_values(dt_model, lag_values, days_to_predict)
         xgb_predictions = predict_future_values(xgb_model, lag_values, days_to_predict)
 
-        predictions_df = pd.DataFrame({
+        predictions_df = pl.DataFrame({
             'Linear Regression': lr_predictions,
             'Random Forest': rf_predictions,
             'Decision Tree': dt_predictions,
             'XGBoost': xgb_predictions
         })
 
-        last_90_days = df.iloc[-90:]
+        last_90_days = df.tail(90).to_pandas()  # Convert to Pandas for compatibility
         fig = plot_predictions(last_90_days, predictions_df, days_to_predict)
         st.plotly_chart(fig)
 
         st.write(f"Predicted Selling Rate for the Next {days_to_predict} Days:")
         st.write(predictions_df)
-        st.divider()  # 👈 Draws a horizontal rul
+        st.divider()
+
     st.write("Go to the 'About', 'Home', 'Visualization', 'Stats Output', or 'Predictions' pages for more analysis.")
+
 
 if __name__ == "__main__":
     main()
